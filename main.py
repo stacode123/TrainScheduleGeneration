@@ -1,19 +1,19 @@
+#Import Libraries
 import math
 import warnings
 from datetime import time
-
 import pandas as pd
 from PIL import Image, ImageDraw, ImageFont
 
 # Suppress all future warnings
 warnings.simplefilter(action='ignore', category=FutureWarning)
-
-
-
+#Define Fonts
 Nor= ImageFont.truetype("arial.ttf", 10)
 Norplus = ImageFont.truetype("arial.ttf", 11)
 Bol= ImageFont.truetype("arialbd.ttf", 18)
 Bols= ImageFont.truetype("arialbd.ttf", 12)
+
+#Define Sort Keys
 def sort_key(item):
     if item['departure_time'] == '?':
         return time.max  # Use the maximum time value for 'KOLIZJA'
@@ -26,6 +26,7 @@ def sort_key2(item):
 def sort_key3(item):
     return item['departure_time']
 
+#Define Text Functions
 def wrap_text(text, font, max_width):
     lines = []
     words = text.split()
@@ -42,37 +43,35 @@ def text_extract(list,station,current):
         textout = textout + i[0] + " " + str(i[1])[:5] + ", "
     return textout
 
-
-
-
+#Open Excel File and set up variables
 stacje = []
 sheet= pd.ExcelFile('rj.xlsx')
 sheets = sheet.sheet_names
 per = len(sheets)
 it = 0
 print("Importing Data")
+# Extract Station Names
 for i in sheets:
     it+=1
     print(f"{(it / per) * 100:.2f}%")
     if "LK" in i:
-  #      print("huj")
         df = pd.read_excel('rj.xlsx', sheet_name=i,)
         df.fillna(method='ffill', inplace=True)
-   #     print(df)
         column_a_data = df['Unnamed: 0'].tolist()
-    #    print(column_a_data)
         stacje = stacje + column_a_data
-
+# Remove station names that are not actual stations
 stacje = list(set(stacje) - {" nan"})
 stacje = list(set(stacje) - {"nan"})
 stacje = list(set(stacje) - {"Informacja o pociągu"})
 stacje = list(set(stacje) - {"Warszawa\xa0Zachodnia"})
+# Populate Departure and Arrival Dictionaries
 odjazdy =  {i: [] for i in stacje}
+przyjazdy =  {i: [] for i in stacje}
 
 print("Parsing Data")
 per = 2*len(sheets)
 it = 0
-# Iterate over each sheet again to add departure time and train details
+# Extract Departure Times
 for i in sheets:
     it+=1
     print(f"{(it / per) * 100:.2f}%")
@@ -89,7 +88,8 @@ for i in sheets:
                     if {'departure_time': departure_time,'train_details': [train_details[0]["Unnamed: {}".format(x)],train_details[1]["Unnamed: {}".format(x)]]} not in odjazdy[station]:
                         if departure_time != '<' and departure_time != '|' and departure_time != '?':
                            odjazdy[station].append({'departure_time': departure_time,'train_details': [train_details[0]["Unnamed: {}".format(x)],train_details[1]["Unnamed: {}".format(x)]]})
-przyjazdy =  {i: [] for i in stacje}
+
+# Extract Arrival Data
 for i in sheets:
     it+=1
     print(f"{(it / per) * 100:.2f}%")
