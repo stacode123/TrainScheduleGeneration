@@ -2,16 +2,24 @@
 import math
 import warnings
 from datetime import time
+from os import makedirs as direct
+import configparser
+
+
 import pandas as pd
 from PIL import Image, ImageDraw, ImageFont
+
+# Read configuration file
+config = configparser.ConfigParser()
+config.read('config.ini')
 
 # Suppress all future warnings
 warnings.simplefilter(action='ignore', category=FutureWarning)
 #Define Fonts
-Nor= ImageFont.truetype("arial.ttf", 10)
-Norplus = ImageFont.truetype("arial.ttf", 11)
-Bol= ImageFont.truetype("arialbd.ttf", 18)
-Bols= ImageFont.truetype("arialbd.ttf", 12)
+Nor= ImageFont.truetype(config['CONFIG']['FontPath'] , int(config['FONT_SIZES']['Normal']))
+Norplus = ImageFont.truetype(config['CONFIG']['FontPath'] , int(config['FONT_SIZES']['NormalPlus']))
+Bol= ImageFont.truetype(config['CONFIG']['BoldFontPath'] , int(config['FONT_SIZES']['Bold']))
+Bols= ImageFont.truetype(config['CONFIG']['BoldFontPath'] , int(config['FONT_SIZES']['BoldSmall']))
 
 #Define Sort Keys
 def sort_key(item):
@@ -44,8 +52,8 @@ def text_extract(list,station,current):
     return textout
 
 #Open Excel File and set up variables
-stacje = []
-sheet= pd.ExcelFile('rj.xlsx')
+stations = []
+sheet= pd.ExcelFile(config['CONFIG']['ExcelFilePath'])
 sheets = sheet.sheet_names
 per = len(sheets)
 it = 0
@@ -55,18 +63,18 @@ for i in sheets:
     it+=1
     print(f"{(it / per) * 100:.2f}%")
     if "LK" in i:
-        df = pd.read_excel('rj.xlsx', sheet_name=i,)
+        df = pd.read_excel(config['CONFIG']['ExcelFilePath'], sheet_name=i,)
         df.fillna(method='ffill', inplace=True)
         column_a_data = df['Unnamed: 0'].tolist()
-        stacje = stacje + column_a_data
+        stations = stations + column_a_data
 # Remove station names that are not actual stations
-stacje = list(set(stacje) - {" nan"})
-stacje = list(set(stacje) - {"nan"})
-stacje = list(set(stacje) - {"Informacja o pociągu"})
-stacje = list(set(stacje) - {"Warszawa\xa0Zachodnia"})
+stations = list(set(stations) - {" nan"})
+stations = list(set(stations) - {"nan"})
+stations = list(set(stations) - {"Informacja o pociągu"})
+stations = list(set(stations) - {"Warszawa\xa0Zachodnia"})
 # Populate Departure and Arrival Dictionaries
-odjazdy =  {i: [] for i in stacje}
-przyjazdy =  {i: [] for i in stacje}
+Departures =  {i: [] for i in stations}
+Arrivals =  {i: [] for i in stations}
 
 print("Parsing Data")
 per = 2*len(sheets)
@@ -76,44 +84,44 @@ for i in sheets:
     it+=1
     print(f"{(it / per) * 100:.2f}%")
     if "LK" in i:
-        df = pd.read_excel('rj.xlsx', sheet_name=i)
+        df = pd.read_excel(config['CONFIG']['ExcelFilePath'], sheet_name=i)
         df.fillna(method='ffill', inplace=True) # Drop rows where all elements are NaN
 
         train_details = df.iloc[:2].to_dict('records')
         for x in range(2,df.shape[1]):
             for index, row in df.iloc[2:].iterrows():
                 station = row['Unnamed: 0']
-                if station in odjazdy and row['Unnamed: 1'] == "odj.":
+                if station in Departures and row['Unnamed: 1'] == "odj.":
                     departure_time = row['Unnamed: {}'.format(x)]
-                    if {'departure_time': departure_time,'train_details': [train_details[0]["Unnamed: {}".format(x)],train_details[1]["Unnamed: {}".format(x)]]} not in odjazdy[station]:
+                    if {'departure_time': departure_time,'train_details': [train_details[0]["Unnamed: {}".format(x)],train_details[1]["Unnamed: {}".format(x)]]} not in Departures[station]:
                         if departure_time != '<' and departure_time != '|' and departure_time != '?':
-                           odjazdy[station].append({'departure_time': departure_time,'train_details': [train_details[0]["Unnamed: {}".format(x)],train_details[1]["Unnamed: {}".format(x)]]})
+                           Departures[station].append({'departure_time': departure_time,'train_details': [train_details[0]["Unnamed: {}".format(x)],train_details[1]["Unnamed: {}".format(x)]]})
 
 # Extract Arrival Data
 for i in sheets:
     it+=1
     print(f"{(it / per) * 100:.2f}%")
     if "LK" in i:
-        df = pd.read_excel('rj.xlsx', sheet_name=i)
+        df = pd.read_excel(config['CONFIG']['ExcelFilePath'], sheet_name=i)
         df.fillna(method='ffill', inplace=True) # Drop rows where all elements are NaN
 
         train_details = df.iloc[:2].to_dict('records')
         for x in range(2,df.shape[1]):
             for index, row in df.iloc[2:].iterrows():
                 station = row['Unnamed: 0']
-                if station in przyjazdy and row['Unnamed: 1'] == "przyj." or row['Unnamed: 1'] == "przj." and station != "Warszawa\xa0Zachodnia":
+                if station in Arrivals and row['Unnamed: 1'] == "przyj." or row['Unnamed: 1'] == "przj." and station != "Warszawa\xa0Zachodnia":
                     departure_time = row['Unnamed: {}'.format(x)]
-                    if {'departure_time': departure_time,'train_details': [train_details[0]["Unnamed: {}".format(x)],train_details[1]["Unnamed: {}".format(x)]]} not in przyjazdy[station]:
+                    if {'departure_time': departure_time,'train_details': [train_details[0]["Unnamed: {}".format(x)],train_details[1]["Unnamed: {}".format(x)]]} not in Arrivals[station]:
                         if departure_time != '<' and departure_time != '|':
-                            przyjazdy[station].append({'departure_time': departure_time,'train_details': [train_details[0]["Unnamed: {}".format(x)],train_details[1]["Unnamed: {}".format(x)]]})
+                            Arrivals[station].append({'departure_time': departure_time,'train_details': [train_details[0]["Unnamed: {}".format(x)],train_details[1]["Unnamed: {}".format(x)]]})
 
 
 trains = {}   #Dictionary of all stations and departure times for each train
 trainsls = {} #Dictionary of all stations and arrival times for each train
 trainslss = {} #Dictionary of the last station and arrival time for each train
 #Generate train Dictionary
-for i in odjazdy:
-    for x in odjazdy[i]:
+for i in Departures:
+    for x in Departures[i]:
         trains[tuple(x['train_details'])] = []
         trainsls[tuple(x['train_details'])] = []
         trainslss[tuple(x['train_details'])] = []
@@ -127,8 +135,8 @@ for key in trainslss:
 
 
 #Itterate through all the stations and add the stations and departure times to the dictionary
-for i in odjazdy:
-    for x in odjazdy[i]:
+for i in Departures:
+    for x in Departures[i]:
         trains[tuple(x['train_details'])].append(i) # Append the station to the train
         trains[tuple(x['train_details'])].append(x['departure_time']) # Append the departure time to the train #
 #Sort the dictionary by departure time
@@ -137,13 +145,13 @@ for key in trains:
     trainssort[key] = sorted([(trains[key][i], trains[key][i + 1]) for i in range(0, len(trains[key]), 2)],key=lambda x: sort_key2(x[1]))
 
 #Append Trains to trainsls
-for i in przyjazdy:
-    for x in przyjazdy[i]:
+for i in Arrivals:
+    for x in Arrivals[i]:
         if tuple(x['train_details']) not in trainsls:
             trainsls[tuple(x['train_details'])] = []
 #Itterate through all the stations and add the stations and arrival times to the dictionary
-for i in przyjazdy:
-    for x in przyjazdy[i]:
+for i in Arrivals:
+    for x in Arrivals[i]:
         trainsls[tuple(x['train_details'])].append(i) # Append the station to the train
         trainsls[tuple(x['train_details'])].append(x['departure_time'])  # Append the departure time to the train
 
@@ -160,28 +168,28 @@ for i in trainslss:
 
 print(trainslss)
 
-
-
+#Make Sure The Directory Exists
+direct(config['CONFIG']['OutputDirectory'], exist_ok=True)
 #Create Posters
 print("Creating Posters")
-per = len(odjazdy)
+per = len(Departures)
 it = 0
-for i in odjazdy:
+for i in Departures:
     it += 1
     print(f"{(it / per) * 100:.2f}%")
     iter=0
     page=0
-    pos1 = (54,104)
-    pos2 = (92,100)
-    pos3 = (94,110)
-    pos4 = (160,102)
-    pos5 = (560,135)
+    pos1 = (int(config['TEXT']['DepartureTimeX']), int(config['TEXT']['DepartureTimeY']))
+    pos2 = (int(config['TEXT']['TrainNameX']), int(config['TEXT']['TrainNameY']))
+    pos3 = (int(config['TEXT']['TrainNumberX']), int(config['TEXT']['TrainNumberY']))
+    pos4 = (int(config['TEXT']['PassingStopsX']), int(config['TEXT']['PassingStopsY']))
+    pos5 = (int(config['TEXT']['DestinationEndX']), int(config['TEXT']['DestinationEndY']))
     maxWidth = 400
-    OdjSort =sorted(odjazdy[i], key=sort_key)
+    OdjSort =sorted(Departures[i], key=sort_key)
     image=Image.open("Podstawa.png")
     draw = ImageDraw.Draw(image)
     draw.text((55, 37), str(i), font=Bol, fill="black")
-    for x in range(10*math.floor(len(odjazdy[i])/10)):
+    for x in range(10*math.floor(len(Departures[i])/10)):
         iter+=1
         # Print Departure Time and Train Details
         draw.text(pos1, str(OdjSort[iter - 1]['departure_time'])[:5], font=Bols,fill="black")
@@ -201,26 +209,26 @@ for i in odjazdy:
 
 
         #iter positions
-        pos1 = (54,pos1[1]+69)
-        pos2 = (92,pos2[1]+69)
-        pos3 = (94,pos3[1]+69)
-        pos4 = (160,pos4[1]+69)
-        pos5 = (560,pos5[1]+69)
+        pos1 = (int(config['TEXT']['DepartureTimeX']),pos1[1]+int(config['TEXT']['IncrementY']))
+        pos2 = (int(config['TEXT']['TrainNameX']),pos2[1]+int(config['TEXT']['IncrementY']))
+        pos3 = (int(config['TEXT']['TrainNumberX']),pos3[1]+int(config['TEXT']['IncrementY']))
+        pos4 = (int(config['TEXT']['PassingStopsX']),pos4[1]+int(config['TEXT']['IncrementY']))
+        pos5 = (int(config['TEXT']['DestinationEndX']),pos5[1]+int(config['TEXT']['IncrementY']))
         #Start new page every 10 entries
         if iter%10==0:
             page+=1
-            image.save(f"Plakaty/{i}{page}.png")
+            image.save(f"{config['CONFIG']['OutputDirectory']}/{i}{page}.png")
             image=Image.open("Podstawa.png")
             draw = ImageDraw.Draw(image)
             draw.text((55, 37), str(i), font=Bol, fill="black")
-            pos1 = (54,104)
-            pos2 = (92,100)
-            pos3 = (94,110)
-            pos4 = (160,102)
-            pos5 = (560,135)
+            pos1 = (int(config['TEXT']['DepartureTimeX']), int(config['TEXT']['DepartureTimeY']))
+            pos2 = (int(config['TEXT']['TrainNameX']), int(config['TEXT']['TrainNameY']))
+            pos3 = (int(config['TEXT']['TrainNumberX']), int(config['TEXT']['TrainNumberY']))
+            pos4 = (int(config['TEXT']['PassingStopsX']), int(config['TEXT']['PassingStopsY']))
+            pos5 = (int(config['TEXT']['DestinationEndX']), int(config['TEXT']['DestinationEndY']))
     page+=1
     #Start last Page
-    for x in range(len(odjazdy[i])%10):
+    for x in range(len(Departures[i])%10):
         iter += 1
         # Print Departure Time and Train Details
         draw.text(pos1, str(OdjSort[iter - 1]['departure_time'])[:5], font=Bols, fill="black")
@@ -240,13 +248,13 @@ for i in odjazdy:
 
 
         # iter positions
-        pos1 = (54, pos1[1] + 69)
-        pos2 = (92, pos2[1] + 69)
-        pos3 = (94, pos3[1] + 69)
-        pos4 = (160,pos4[1] + 69)
-        pos5 = (560,pos5[1] + 69)
+        pos1 = (int(config['TEXT']['DepartureTimeX']),pos1[1]+int(config['TEXT']['IncrementY']))
+        pos2 = (int(config['TEXT']['TrainNameX']),pos2[1]+int(config['TEXT']['IncrementY']))
+        pos3 = (int(config['TEXT']['TrainNumberX']),pos3[1]+int(config['TEXT']['IncrementY']))
+        pos4 = (int(config['TEXT']['PassingStopsX']),pos4[1]+int(config['TEXT']['IncrementY']))
+        pos5 = (int(config['TEXT']['DestinationEndX']),pos5[1]+int(config['TEXT']['IncrementY']))
     #Save Final Image
-    image.save(f"Plakaty/{i}{page}.png")
+    image.save(f"{config['CONFIG']['OutputDirectory']}/{i}{page}.png")
 
 
 
