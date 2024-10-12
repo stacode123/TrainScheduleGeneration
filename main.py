@@ -71,6 +71,7 @@ for i in sheets:
 stations = list(set(stations) - {" nan"})
 stations = list(set(stations) - {"nan"})
 stations = list(set(stations) - {"Informacja o pociągu"})
+stations = list(set(stations) - {"Train Info"})
 stations = list(set(stations) - {"Warszawa\xa0Zachodnia"})
 # Populate Departure and Arrival Dictionaries
 Departures =  {i: [] for i in stations}
