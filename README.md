@@ -29,3 +29,12 @@ Formating:
 5. Each following column has the train name/operator in row 2 and train number in row 3
 6. Each following row of the column signifies a departure time coresponing to the station in the same row
 7. use "<" or "|" to signify that a train doesn't stop at a station(This is a Requirement, empty spaces will result in wrong data)
+                         
+
+Name the base file for the Poster "Podstawa.png"
+example of a base file:
+![Base file example](Podstawa.png)
+
+
+
+# If using a different base file, make sure to change the config of data locations in config.ini
