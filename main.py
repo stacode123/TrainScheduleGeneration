@@ -1,9 +1,9 @@
-from PIL import Image, ImageDraw, ImageFont
-import pandas as pd
 import math
-from datetime import time, datetime
 import warnings
+from datetime import time
 
+import pandas as pd
+from PIL import Image, ImageDraw, ImageFont
 
 # Suppress all future warnings
 warnings.simplefilter(action='ignore', category=FutureWarning)
@@ -11,6 +11,7 @@ warnings.simplefilter(action='ignore', category=FutureWarning)
 
 
 Nor= ImageFont.truetype("arial.ttf", 10)
+Norplus = ImageFont.truetype("arial.ttf", 11)
 Bol= ImageFont.truetype("arialbd.ttf", 18)
 Bols= ImageFont.truetype("arialbd.ttf", 12)
 def sort_key(item):
@@ -30,11 +31,16 @@ def wrap_text(text, font, max_width):
     words = text.split()
     while words:
         line = ''
-        while words and font.getsize(line + words[0])[0] <= max_width:
+        while words and font.getlength(line + words[0]) <= max_width:
             line = line + (words.pop(0) + ' ')
         lines.append(line)
     return lines
-
+def text_extract(list,station,current):
+    textout = ""
+    ind = list.index((station,current))
+    for i in list[ind+1:]:
+        textout = textout + i[0] + " " + str(i[1])[:5] + ", "
+    return textout
 
 
 
@@ -102,15 +108,16 @@ for i in sheets:
                             przyjazdy[station].append({'departure_time': departure_time,'train_details': [train_details[0]["Unnamed: {}".format(x)],train_details[1]["Unnamed: {}".format(x)]]})
 
 
-trains = {}
-trainsls = {}
-trainslss = {}
+trains = {}   #Dictionary of all stations and departure times for each train
+trainsls = {} #Dictionary of all stations and arrival times for each train
+trainslss = {} #Dictionary of the last station and arrival time for each train
+#Generate train Dictionary
 for i in odjazdy:
     for x in odjazdy[i]:
         trains[tuple(x['train_details'])] = []
         trainsls[tuple(x['train_details'])] = []
         trainslss[tuple(x['train_details'])] = []
-
+#Sort the Dictionary
 for key in trains:
     trains[key] = list(set(trains[key]))
 for key in trainsls:
@@ -119,56 +126,43 @@ for key in trainslss:
     trainslss[key] = list(set(trainslss[key]))
 
 
-#Now i want to insert all the stations and the departure time from that station that the train stops at in the dictionary
+#Itterate through all the stations and add the stations and departure times to the dictionary
 for i in odjazdy:
     for x in odjazdy[i]:
         trains[tuple(x['train_details'])].append(i) # Append the station to the train
         trains[tuple(x['train_details'])].append(x['departure_time']) # Append the departure time to the train #
+#Sort the dictionary by departure time
 trainssort = {}
 for key in trains:
     trainssort[key] = sorted([(trains[key][i], trains[key][i + 1]) for i in range(0, len(trains[key]), 2)],key=lambda x: sort_key2(x[1]))
 
+#Append Trains to trainsls
 for i in przyjazdy:
     for x in przyjazdy[i]:
         if tuple(x['train_details']) not in trainsls:
             trainsls[tuple(x['train_details'])] = []
-#Now i want to insert all the stations and the departure time from that station that the train stops at in the dictionary
+#Itterate through all the stations and add the stations and arrival times to the dictionary
 for i in przyjazdy:
     for x in przyjazdy[i]:
         trainsls[tuple(x['train_details'])].append(i) # Append the station to the train
         trainsls[tuple(x['train_details'])].append(x['departure_time'])  # Append the departure time to the train
 
+#Remove Duplicate Trains
 for key in trainslss:
     trainslss[key] = list(set(trainslss[key]))
 
-
+#Find Last Station for all trains and append to trainslss
 for i in trainslss:
     sort = (sorted(trainsls[i], key=sort_key2)[-1],trainsls[i][trainsls[i].index(sorted(trainsls[i], key=sort_key2)[-1])-1])
     if trainslss[i] != sort:
         trainslss[i] = sort
 
 
+print(trainslss)
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+#Create Posters
 print("Creating Posters")
 per = len(odjazdy)
 it = 0
@@ -178,9 +172,10 @@ for i in odjazdy:
     iter=0
     page=0
     pos1 = (54,104)
-    pos2 = (96,100)
-    pos3 = (100,110)
-    pos4 = (152,102)
+    pos2 = (92,100)
+    pos3 = (94,110)
+    pos4 = (160,102)
+    pos5 = (560,135)
     maxWidth = 400
     OdjSort =sorted(odjazdy[i], key=sort_key)
     image=Image.open("Podstawa.png")
@@ -188,19 +183,30 @@ for i in odjazdy:
     draw.text((55, 37), str(i), font=Bol, fill="black")
     for x in range(10*math.floor(len(odjazdy[i])/10)):
         iter+=1
-        #Print Initial Info on Page
+        # Print Departure Time and Train Details
         draw.text(pos1, str(OdjSort[iter - 1]['departure_time'])[:5], font=Bols,fill="black")
         draw.text(pos2,str(list(OdjSort[iter-1]['train_details'])[0]), font=Nor, fill="black")
         draw.text(pos3, str(list(OdjSort[iter-1]['train_details'])[1]), font=Nor, fill="black")
-        draw.text(pos4,
-        #Print Route on Page
+
+        #Print Route on Page (Wrapped)
+        wrapped_text = wrap_text(text_extract(trainssort[tuple(OdjSort[iter-1]['train_details'])],i,OdjSort[iter-1]['departure_time']), Norplus, maxWidth)
+        y_text = pos4[1]
+        for line in wrapped_text:
+            draw.text((pos4[0],y_text),line, font=Norplus, fill="black")
+            y_text += 13
+        #Print Destination
+        dest = trainslss[tuple(OdjSort[iter - 1]['train_details'])]
+        text = str(dest[0])[:5] + " " + str(dest[1])
+        draw.text((pos5[0]-Bol.getlength(text),pos5[1]),text, font=Bol, fill="black")
 
 
         #iter positions
-        pos1 = (54,pos1[1]+71)
-        pos2 = (96,pos2[1]+71)
-        pos3 = (100,pos3[1]+71)
-        pos4 = (152, pos4[1] + 71)
+        pos1 = (54,pos1[1]+69)
+        pos2 = (92,pos2[1]+69)
+        pos3 = (94,pos3[1]+69)
+        pos4 = (160,pos4[1]+69)
+        pos5 = (560,pos5[1]+69)
+        #Start new page every 10 entries
         if iter%10==0:
             page+=1
             image.save(f"Plakaty/{i}{page}.png")
@@ -208,22 +214,38 @@ for i in odjazdy:
             draw = ImageDraw.Draw(image)
             draw.text((55, 37), str(i), font=Bol, fill="black")
             pos1 = (54,104)
-            pos2 = (96,100)
-            pos3 = (100,110)
-            pos4 = (152, 102)
+            pos2 = (92,100)
+            pos3 = (94,110)
+            pos4 = (160,102)
+            pos5 = (560,135)
     page+=1
+    #Start last Page
     for x in range(len(odjazdy[i])%10):
         iter += 1
-        # Print on Page
+        # Print Departure Time and Train Details
         draw.text(pos1, str(OdjSort[iter - 1]['departure_time'])[:5], font=Bols, fill="black")
         draw.text(pos2, str(list(OdjSort[iter - 1]['train_details'])[0]), font=Nor, fill="black")
         draw.text(pos3, str(list(OdjSort[iter - 1]['train_details'])[1]), font=Nor, fill="black")
-        # iter positions
-        pos1 = (54, pos1[1] + 71)
-        pos2 = (96, pos2[1] + 71)
-        pos3 = (100, pos3[1] + 71)
-        pos4 = (152, pos4[1] + 71)
 
+        # Print Route on Page (Wrapped)
+        wrapped_text = wrap_text(text_extract(trainssort[tuple(OdjSort[iter-1]['train_details'])],i,OdjSort[iter-1]['departure_time']), Norplus, maxWidth)
+        y_text = pos4[1]
+        for line in wrapped_text:
+            draw.text((pos4[0], y_text), line, font=Norplus, fill="black")
+            y_text += 13
+        #Print Destination
+        dest = trainslss[tuple(OdjSort[iter - 1]['train_details'])]
+        text = str(dest[0])[:5] + " " + str(dest[1])
+        draw.text((pos5[0]-Bol.getlength(text),pos5[1]),text, font=Bol, fill="black")
+
+
+        # iter positions
+        pos1 = (54, pos1[1] + 69)
+        pos2 = (92, pos2[1] + 69)
+        pos3 = (94, pos3[1] + 69)
+        pos4 = (160,pos4[1] + 69)
+        pos5 = (560,pos5[1] + 69)
+    #Save Final Image
     image.save(f"Plakaty/{i}{page}.png")
 
 
