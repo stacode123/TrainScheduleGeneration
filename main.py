@@ -4,7 +4,7 @@ import warnings
 from datetime import time
 from os import makedirs as direct
 import configparser
-
+import re
 
 import pandas as pd
 from PIL import Image, ImageDraw, ImageFont
@@ -61,7 +61,11 @@ def text_extract(list,station,current):
     for i in list[ind+1:]:
         textout = textout + i[0] + " " + str(i[1])[:5] + ", "
     return textout
-
+#Define Text Cleaning Functions for Immersive Paintings
+def remove_non_english_and_spaces(input_string):
+    # Replace non-English letters and spaces with an empty string
+    cleaned_string = re.sub(r'[^a-zA-Z]', '', input_string)
+    return cleaned_string.lower()
 
 
 
@@ -245,7 +249,7 @@ for i in Departures:
         #Start new page every 10 entries
         if iter%10==0:
             page+=1
-            image.save(f"{config['CONFIG']['OutputDirectory']}/{i}{page}.png")
+            image.save(f"{config['CONFIG']['OutputDirectory']}/{remove_non_english_and_spaces(i)}{page}.png")
             image=Image.open("Podstawa.png")
             draw = ImageDraw.Draw(image)
             draw.text((55, 37), str(i), font=Bol, fill="black")
@@ -282,7 +286,7 @@ for i in Departures:
         pos4 = (int(config['TEXT']['PassingStopsX']),pos4[1]+int(config['TEXT']['IncrementY']))
         pos5 = (int(config['TEXT']['DestinationEndX']),pos5[1]+int(config['TEXT']['IncrementY']))
     #Save Final Image
-    image.save(f"{config['CONFIG']['OutputDirectory']}/{i}{page}.png")
+    image.save(f"{config['CONFIG']['OutputDirectory']}/{remove_non_english_and_spaces(i)}{page}.png")
 
 
 
