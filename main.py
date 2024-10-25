@@ -33,6 +33,17 @@ def sort_key2(item):
     return 0
 def sort_key3(item):
     return item['departure_time']
+def sort_key4(item):
+    if isinstance(item, time):
+        a = item.hour*60+item.minute
+        if a <= 720:
+            return a + 1440
+        else:
+            return a
+    return 0
+
+
+
 
 #Define Text Functions
 def wrap_text(text, font, max_width):
@@ -50,6 +61,12 @@ def text_extract(list,station,current):
     for i in list[ind+1:]:
         textout = textout + i[0] + " " + str(i[1])[:5] + ", "
     return textout
+
+
+
+
+
+
 
 #Open Excel File and set up variables
 stations = []
@@ -143,7 +160,12 @@ for i in Departures:
 #Sort the dictionary by departure time
 trainssort = {}
 for key in trains:
-    trainssort[key] = sorted([(trains[key][i], trains[key][i + 1]) for i in range(0, len(trains[key]), 2)],key=lambda x: sort_key2(x[1]))
+    a = max([trains[key][i + 1] for i in range(0, len(trains[key]), 2)])
+    b = min([trains[key][i + 1] for i in range(0, len(trains[key]), 2)])
+    if sort_key2(a) - sort_key2(b) >= 720:
+        trainssort[key] = sorted([(trains[key][i], trains[key][i + 1]) for i in range(0, len(trains[key]), 2)],key=lambda x: sort_key4(x[1]))
+    else:
+        trainssort[key] = sorted([(trains[key][i], trains[key][i + 1]) for i in range(0, len(trains[key]), 2)],key=lambda x: sort_key2(x[1]))
 
 #Append Trains to trainsls
 for i in Arrivals:
@@ -162,7 +184,12 @@ for key in trainslss:
 
 #Find Last Station for all trains and append to trainslss
 for i in trainslss:
-    sort = (sorted(trainsls[i], key=sort_key2)[-1],trainsls[i][trainsls[i].index(sorted(trainsls[i], key=sort_key2)[-1])-1])
+    a = max([trainsls[i][x + 1] for x in range(0, len(trainsls[i]), 2)])
+    b = min([trainsls[i][x + 1] for x in range(0, len(trainsls[i]), 2)])
+    if sort_key2(a) - sort_key2(b) >= 720:
+        sort = (sorted(trainsls[i], key=sort_key4)[-1],trainsls[i][trainsls[i].index(sorted(trainsls[i], key=sort_key4)[-1])-1])
+    else:
+        sort = (sorted(trainsls[i], key=sort_key2)[-1],trainsls[i][trainsls[i].index(sorted(trainsls[i], key=sort_key2)[-1])-1])
     if trainslss[i] != sort:
         trainslss[i] = sort
 
