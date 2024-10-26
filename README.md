@@ -5,12 +5,11 @@ This script processes train schedules from an Excel file and generates posters w
 - Python 3.6+
 - [Pillow](https://pillow.readthedocs.io/en/stable/)
 - [pandas](https://pandas.pydata.org/)
-- [openpyxl](https://openpyxl.readthedocs.io/en/stable/)
 
 ## Usage:
 1. Install the dependencies:
 ```bash
-pip install pillow pandas openpyxl 
+pip install pillow pandas
 ```
 2. Place the Excel file with the train schedules in the folder with the python file
 3. Run the script:
@@ -19,12 +18,12 @@ python main.py
 ```
 
 ## Excel file format:
-The Excel file can have multiple sheets, each sheets representing a different train line. Each Sheet name with trains schedules must have "LK" in the name.
+The Excel file can have multiple sheets, each sheets representing a different train line. 
 Example:
 ![Excel file example](img.png)
 Formating:
-1. ~~Row 1 must be Empty~~ (This is no longer a requirement)
-2. The first 3 rows at the start of the schedule must have "Train Info" In coloumn 1  
+1. Row 1 must be Empty
+2. Row 2,3,4 column 1 must be "Train Info"
 3. Following rows must be train station names
 4. Column 2 signifies if the time shown in the following columns are arrival(przyj. or przj) or departure(odj.)
 5. Each following column has the train name/operator in row 2 and train number in row 3
