@@ -81,26 +81,34 @@ it = 0
 print("Formating Data")
 for i in sheets:
     it += 1
+    s=False
     print(f"{(it / per) * 100:.2f}%")
     if "LK" in i:
         df = pd.read_excel(config['CONFIG']['ExcelFilePath'], sheet_name=i, header=None)
         try:
             index = df[df.iloc[:, 0] == "Informacja o pociągu"].index[0]
         except:
-            index = df[df.iloc[:, 0] == "Train Info"].index[0]
-
-        df = df.iloc[index:]
+            try:
+                index = df[df.iloc[:, 0] == "Train Info"].index[0]
+            except:
+                s=True
+                pass
+        if not s:
+            df = df.iloc[index:]
         empty_row = pd.DataFrame([[None] * len(df.columns)], columns=df.columns)
         df = pd.concat([empty_row, df], ignore_index=True)
         df.reset_index(drop=True, inplace=True)
         try:
             index = df[df.iloc[:, 0] == "Koniec"].index[0]
         except:
-            index = df[df.iloc[:, 0] == "End"].index[0]
-
-        df = df.iloc[:index]
-        with pd.ExcelWriter(config['CONFIG']['ExcelFilePath'], mode='a', engine='openpyxl', if_sheet_exists='replace') as writer:
-            df.to_excel(writer, sheet_name=i, index=False, header=False)
+            try:
+                index = df[df.iloc[:, 0] == "End"].index[0]
+            except:
+                s=True
+        if not s:
+            df = df.iloc[:index]
+            with pd.ExcelWriter(config['CONFIG']['ExcelFilePath'], mode='a', engine='openpyxl', if_sheet_exists='replace') as writer:
+                df.to_excel(writer, sheet_name=i, index=False, header=False)
 
 print("Importing Data")
 
@@ -112,6 +120,7 @@ for i in sheets:
     if "LK" in i:
         df = pd.read_excel(config['CONFIG']['ExcelFilePath'], sheet_name=i,)
         df.fillna(method='ffill', inplace=True)
+        print(df)
         column_a_data = df['Unnamed: 0'].tolist()
         stations = stations + column_a_data
 # Remove station names that are not actual stations
