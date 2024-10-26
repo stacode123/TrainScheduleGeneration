@@ -249,7 +249,14 @@ for i in Departures:
         #Start new page every 10 entries
         if iter%10==0:
             page+=1
-            image.save(f"{config['CONFIG']['OutputDirectory']}/{remove_non_english_and_spaces(i)}{page}.png")
+            original_width, original_height = image.size
+            res = image.resize((359, 507))
+            new_image = Image.new("RGBA", (original_width, original_height), (255, 255, 255, 0))
+            paste_x = 0
+            paste_y = (original_height - 507) // 2
+            new_image.paste(res, (paste_x, paste_y))
+
+            new_image.save(f"{config['CONFIG']['OutputDirectory']}/{remove_non_english_and_spaces(i)}{page}.png")
             image=Image.open("Podstawa.png")
             draw = ImageDraw.Draw(image)
             draw.text((55, 37), str(i), font=Bol, fill="black")
@@ -285,8 +292,15 @@ for i in Departures:
         pos3 = (int(config['TEXT']['TrainNumberX']),pos3[1]+int(config['TEXT']['IncrementY']))
         pos4 = (int(config['TEXT']['PassingStopsX']),pos4[1]+int(config['TEXT']['IncrementY']))
         pos5 = (int(config['TEXT']['DestinationEndX']),pos5[1]+int(config['TEXT']['IncrementY']))
-    #Save Final Image
-    image.save(f"{config['CONFIG']['OutputDirectory']}/{remove_non_english_and_spaces(i)}{page}.png")
+    #Save Final Image For Immersive Painting Importing
+    original_width, original_height = image.size
+    res = image.resize((359, 507))
+    new_image = Image.new("RGBA", (original_width, original_height), (255, 255, 255, 0))
+    paste_x = 0
+    paste_y = (original_height - 507) // 2
+    new_image.paste(res, (paste_x, paste_y))
+
+    new_image.save(f"{config['CONFIG']['OutputDirectory']}/{remove_non_english_and_spaces(i)}{page}.png")
 
 
 
