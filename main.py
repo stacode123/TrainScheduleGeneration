@@ -78,8 +78,34 @@ sheet= pd.ExcelFile(config['CONFIG']['ExcelFilePath'])
 sheets = sheet.sheet_names
 per = len(sheets)
 it = 0
+print("Formating Data")
+for i in sheets:
+    it += 1
+    print(f"{(it / per) * 100:.2f}%")
+    if "LK" in i:
+        df = pd.read_excel(config['CONFIG']['ExcelFilePath'], sheet_name=i, header=None)
+        try:
+            index = df[df.iloc[:, 0] == "Informacja o pociągu"].index[0]
+        except:
+            index = df[df.iloc[:, 0] == "Train Info"].index[0]
+
+        df = df.iloc[index:]
+        empty_row = pd.DataFrame([[None] * len(df.columns)], columns=df.columns)
+        df = pd.concat([empty_row, df], ignore_index=True)
+        df.reset_index(drop=True, inplace=True)
+        try:
+            index = df[df.iloc[:, 0] == "Koniec"].index[0]
+        except:
+            index = df[df.iloc[:, 0] == "End"].index[0]
+
+        df = df.iloc[:index]
+        with pd.ExcelWriter(config['CONFIG']['ExcelFilePath'], mode='a', engine='openpyxl', if_sheet_exists='replace') as writer:
+            df.to_excel(writer, sheet_name=i, index=False, header=False)
+
 print("Importing Data")
+
 # Extract Station Names
+it = 0
 for i in sheets:
     it+=1
     print(f"{(it / per) * 100:.2f}%")
