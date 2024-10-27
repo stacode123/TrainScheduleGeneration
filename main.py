@@ -6,6 +6,7 @@ from os import makedirs as direct
 import configparser
 
 import re
+import shutil
 
 import pandas as pd
 from PIL import Image, ImageDraw, ImageFont
@@ -13,6 +14,9 @@ from PIL import Image, ImageDraw, ImageFont
 # Read configuration file
 config = configparser.ConfigParser()
 config.read('config.ini')
+# Delete Existing Posters
+shutil.rmtree(config['CONFIG']['OutputDirectory'], ignore_errors=True)
+
 
 # Suppress all future warnings
 warnings.simplefilter(action='ignore', category=FutureWarning)
@@ -21,6 +25,26 @@ Nor= ImageFont.truetype(config['CONFIG']['FontPath'] , int(config['FONT_SIZES'][
 Norplus = ImageFont.truetype(config['CONFIG']['FontPath'] , int(config['FONT_SIZES']['NormalPlus']))
 Bol= ImageFont.truetype(config['CONFIG']['BoldFontPath'] , int(config['FONT_SIZES']['Bold']))
 Bols= ImageFont.truetype(config['CONFIG']['BoldFontPath'] , int(config['FONT_SIZES']['BoldSmall']))
+
+def ReadExcel(sheet):
+    df = pd.read_excel(config['CONFIG']['ExcelFilePath'], sheet_name=sheet)
+    s=False
+    index = df[(df.iloc[:, 0] == "Informacja o pociągu") | (df.iloc[:, 0] == "Train Info")].index[0]
+    df = df.iloc[index:].reset_index(drop=True)
+    s = False
+    empty_row = pd.DataFrame([[None] * len(df.columns)], columns=df.columns)
+    #df = pd.concat([empty_row, df], )
+    index = df[(df.iloc[:, 0] == "Koniec") | (df.iloc[:, 0] == "End")].index[0]
+    df = df.iloc[:index].reset_index(drop=True)
+    df.fillna(method='ffill', inplace=True)
+    print(df)
+    return df
+
+
+
+
+
+
 
 #Define Sort Keys
 def sort_key(item):
@@ -85,7 +109,7 @@ for i in sheets:
     it+=1
     print(f"{(it / per) * 100:.2f}%")
     if "LK" in i:
-        df = pd.read_excel(config['CONFIG']['ExcelFilePath'], sheet_name=i,)
+        df = ReadExcel(i)
         df.fillna(method='ffill', inplace=True)
         column_a_data = df['Unnamed: 0'].tolist()
         stations = stations + column_a_data
@@ -107,7 +131,7 @@ for i in sheets:
     it+=1
     print(f"{(it / per) * 100:.2f}%")
     if "LK" in i:
-        df = pd.read_excel(config['CONFIG']['ExcelFilePath'], sheet_name=i)
+        df = ReadExcel(i)
         df.fillna(method='ffill', inplace=True) # Drop rows where all elements are NaN
 
         train_details = df.iloc[:2].to_dict('records')
@@ -117,7 +141,7 @@ for i in sheets:
                 if station in Departures and row['Unnamed: 1'] == "odj.":
                     departure_time = row['Unnamed: {}'.format(x)]
                     if {'departure_time': departure_time,'train_details': [train_details[0]["Unnamed: {}".format(x)],train_details[1]["Unnamed: {}".format(x)]]} not in Departures[station]:
-                        if departure_time != '<' and departure_time != '|' and departure_time != '?':
+                        if departure_time != '<' and departure_time != '|' and departure_time != '?' and departure_time == departure_time:
                            Departures[station].append({'departure_time': departure_time,'train_details': [train_details[0]["Unnamed: {}".format(x)],train_details[1]["Unnamed: {}".format(x)]]})
 
 # Extract Arrival Data
@@ -125,7 +149,7 @@ for i in sheets:
     it+=1
     print(f"{(it / per) * 100:.2f}%")
     if "LK" in i:
-        df = pd.read_excel(config['CONFIG']['ExcelFilePath'], sheet_name=i)
+        df = ReadExcel(i)
         df.fillna(method='ffill', inplace=True) # Drop rows where all elements are NaN
 
         train_details = df.iloc[:2].to_dict('records')
@@ -135,7 +159,7 @@ for i in sheets:
                 if station in Arrivals and row['Unnamed: 1'] == "przyj." or row['Unnamed: 1'] == "przj." and station != "Warszawa\xa0Zachodnia":
                     departure_time = row['Unnamed: {}'.format(x)]
                     if {'departure_time': departure_time,'train_details': [train_details[0]["Unnamed: {}".format(x)],train_details[1]["Unnamed: {}".format(x)]]} not in Arrivals[station]:
-                        if departure_time != '<' and departure_time != '|':
+                        if departure_time != '<' and departure_time != '|' and departure_time == departure_time:
                             Arrivals[station].append({'departure_time': departure_time,'train_details': [train_details[0]["Unnamed: {}".format(x)],train_details[1]["Unnamed: {}".format(x)]]})
 
 
