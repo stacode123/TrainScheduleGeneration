@@ -237,9 +237,9 @@ for i in Departures:
     pos5 = (int(config['TEXT']['DestinationEndX']), int(config['TEXT']['DestinationEndY']))
     maxWidth = 400
     OdjSort =sorted(Departures[i], key=sort_key)
-    image=Image.open("Podstawa.png")
+    image=Image.open(config['CONFIG']['BaseImage'])
     draw = ImageDraw.Draw(image)
-    draw.text((55, 37), str(i), font=Bol, fill="black")
+    draw.text((int(config['TEXT']['StationNameX']), int(config['TEXT']['StationNameY'])), str(i), font=Bol, fill="black")
     for x in range(10*math.floor(len(Departures[i])/10)):
         iter+=1
         # Print Departure Time and Train Details
@@ -269,7 +269,7 @@ for i in Departures:
         if iter%10==0:
             page+=1
             image.save(f"{config['CONFIG']['OutputDirectory']}/{i}{page}.png")
-            image=Image.open("Podstawa.png")
+            image=Image.open(config['CONFIG']['BaseImage'])
             draw = ImageDraw.Draw(image)
             draw.text((55, 37), str(i), font=Bol, fill="black")
             pos1 = (int(config['TEXT']['DepartureTimeX']), int(config['TEXT']['DepartureTimeY']))
