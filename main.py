@@ -3,15 +3,21 @@ import math
 import warnings
 from datetime import time
 from os import makedirs as direct
-import configparser
+
+from configobj import ConfigObj
 import shutil
 
 import pandas as pd
 from PIL import Image, ImageDraw, ImageFont
 
 # Read configuration file
-config = configparser.ConfigParser()
-config.read('config.ini')
+presets = ConfigObj('Presets.ini')
+config = ConfigObj('config.ini')
+print(config)
+if config['PRESETS']['Preset'] != "Custom":
+    config['CUSTOM'] = presets[config['PRESETS']['Preset']]
+    print(config)
+
 # Delete Existing Posters
 shutil.rmtree(config['CONFIG']['OutputDirectory'], ignore_errors=True)
 
@@ -19,10 +25,10 @@ shutil.rmtree(config['CONFIG']['OutputDirectory'], ignore_errors=True)
 # Suppress all future warnings
 warnings.simplefilter(action='ignore', category=FutureWarning)
 #Define Fonts
-Nor= ImageFont.truetype(config['CONFIG']['FontPath'] , int(config['FONT_SIZES']['Normal']))
-Norplus = ImageFont.truetype(config['CONFIG']['FontPath'] , int(config['FONT_SIZES']['NormalPlus']))
-Bol= ImageFont.truetype(config['CONFIG']['BoldFontPath'] , int(config['FONT_SIZES']['Bold']))
-Bols= ImageFont.truetype(config['CONFIG']['BoldFontPath'] , int(config['FONT_SIZES']['BoldSmall']))
+Nor= ImageFont.truetype(config['CONFIG']['FontPath'] , int(config['CUSTOM']['FONT_SIZES']['Normal']))
+Norplus = ImageFont.truetype(config['CONFIG']['FontPath'] , int(config['CUSTOM']['FONT_SIZES']['NormalPlus']))
+Bol= ImageFont.truetype(config['CONFIG']['BoldFontPath'] , int(config['CUSTOM']['FONT_SIZES']['Bold']))
+Bols= ImageFont.truetype(config['CONFIG']['BoldFontPath'] , int(config['CUSTOM']['FONT_SIZES']['BoldSmall']))
 
 def ReadExcel(sheet):
     df = pd.read_excel(config['CONFIG']['ExcelFilePath'], sheet_name=sheet)
@@ -35,7 +41,6 @@ def ReadExcel(sheet):
     index = df[(df.iloc[:, 0] == "Koniec") | (df.iloc[:, 0] == "End")].index[0]
     df = df.iloc[:index].reset_index(drop=True)
     df.fillna(method='ffill', inplace=True)
-    print(df)
     return df
 
 
@@ -84,8 +89,6 @@ def text_extract(list,station,current):
     for i in list[ind+1:]:
         textout = textout + i[0] + " " + str(i[1])[:5] + ", "
     return textout
-
-
 
 
 
@@ -230,17 +233,17 @@ for i in Departures:
     print(f"{(it / per) * 100:.2f}%")
     iter=0
     page=0
-    pos1 = (int(config['TEXT']['DepartureTimeX']), int(config['TEXT']['DepartureTimeY']))
-    pos2 = (int(config['TEXT']['TrainNameX']), int(config['TEXT']['TrainNameY']))
-    pos3 = (int(config['TEXT']['TrainNumberX']), int(config['TEXT']['TrainNumberY']))
-    pos4 = (int(config['TEXT']['PassingStopsX']), int(config['TEXT']['PassingStopsY']))
-    pos5 = (int(config['TEXT']['DestinationEndX']), int(config['TEXT']['DestinationEndY']))
-    maxWidth = 400
+    pos1 = (int(config['CUSTOM']['TEXT']['DepartureTimeX']), int(config['CUSTOM']['TEXT']['DepartureTimeY']))
+    pos2 = (int(config['CUSTOM']['TEXT']['TrainNameX']), int(config['CUSTOM']['TEXT']['TrainNameY']))
+    pos3 = (int(config['CUSTOM']['TEXT']['TrainNumberX']), int(config['CUSTOM']['TEXT']['TrainNumberY']))
+    pos4 = (int(config['CUSTOM']['TEXT']['PassingStopsX']), int(config['CUSTOM']['TEXT']['PassingStopsY']))
+    pos5 = (int(config['CUSTOM']['TEXT']['DestinationEndX']), int(config['CUSTOM']['TEXT']['DestinationEndY']))
+    maxWidth = int(config['CUSTOM']['TEXT']['PassingStopsMaxWidth'])
     OdjSort =sorted(Departures[i], key=sort_key)
-    image=Image.open(config['CONFIG']['BaseImage'])
+    image=Image.open(config['CUSTOM']['TEXT']['BaseImage'])
     draw = ImageDraw.Draw(image)
-    draw.text((int(config['TEXT']['StationNameX']), int(config['TEXT']['StationNameY'])), str(i), font=Bol, fill="black")
-    for x in range(10*math.floor(len(Departures[i])/10)):
+    draw.text((int(config['CUSTOM']['TEXT']['StationNameX']), int(config['CUSTOM']['TEXT']['StationNameY'])), str(i), font=Bol, fill="black")
+    for x in range(int(config['CUSTOM']['TEXT']['EntriesPerPage'])*math.floor(len(Departures[i])/int(config['CUSTOM']['TEXT']['EntriesPerPage']))):
         iter+=1
         # Print Departure Time and Train Details
         draw.text(pos1, str(OdjSort[iter - 1]['departure_time'])[:5], font=Bols,fill="black")
@@ -260,26 +263,26 @@ for i in Departures:
 
 
         #iter positions
-        pos1 = (int(config['TEXT']['DepartureTimeX']),pos1[1]+int(config['TEXT']['IncrementY']))
-        pos2 = (int(config['TEXT']['TrainNameX']),pos2[1]+int(config['TEXT']['IncrementY']))
-        pos3 = (int(config['TEXT']['TrainNumberX']),pos3[1]+int(config['TEXT']['IncrementY']))
-        pos4 = (int(config['TEXT']['PassingStopsX']),pos4[1]+int(config['TEXT']['IncrementY']))
-        pos5 = (int(config['TEXT']['DestinationEndX']),pos5[1]+int(config['TEXT']['IncrementY']))
+        pos1 = (int(config['CUSTOM']['TEXT']['DepartureTimeX']),pos1[1]+int(config['CUSTOM']['TEXT']['IncrementY']))
+        pos2 = (int(config['CUSTOM']['TEXT']['TrainNameX']),pos2[1]+int(config['CUSTOM']['TEXT']['IncrementY']))
+        pos3 = (int(config['CUSTOM']['TEXT']['TrainNumberX']),pos3[1]+int(config['CUSTOM']['TEXT']['IncrementY']))
+        pos4 = (int(config['CUSTOM']['TEXT']['PassingStopsX']),pos4[1]+int(config['CUSTOM']['TEXT']['IncrementY']))
+        pos5 = (int(config['CUSTOM']['TEXT']['DestinationEndX']),pos5[1]+int(config['CUSTOM']['TEXT']['IncrementY']))
         #Start new page every 10 entries
-        if iter%10==0:
+        if iter%int(config['CUSTOM']['TEXT']['EntriesPerPage'])==0:
             page+=1
             image.save(f"{config['CONFIG']['OutputDirectory']}/{i}{page}.png")
-            image=Image.open(config['CONFIG']['BaseImage'])
+            image=Image.open(config['CUSTOM']['TEXT']['BaseImage'])
             draw = ImageDraw.Draw(image)
             draw.text((55, 37), str(i), font=Bol, fill="black")
-            pos1 = (int(config['TEXT']['DepartureTimeX']), int(config['TEXT']['DepartureTimeY']))
-            pos2 = (int(config['TEXT']['TrainNameX']), int(config['TEXT']['TrainNameY']))
-            pos3 = (int(config['TEXT']['TrainNumberX']), int(config['TEXT']['TrainNumberY']))
-            pos4 = (int(config['TEXT']['PassingStopsX']), int(config['TEXT']['PassingStopsY']))
-            pos5 = (int(config['TEXT']['DestinationEndX']), int(config['TEXT']['DestinationEndY']))
+            pos1 = (int(config['CUSTOM']['TEXT']['DepartureTimeX']), int(config['CUSTOM']['TEXT']['DepartureTimeY']))
+            pos2 = (int(config['CUSTOM']['TEXT']['TrainNameX']), int(config['CUSTOM']['TEXT']['TrainNameY']))
+            pos3 = (int(config['CUSTOM']['TEXT']['TrainNumberX']), int(config['CUSTOM']['TEXT']['TrainNumberY']))
+            pos4 = (int(config['CUSTOM']['TEXT']['PassingStopsX']), int(config['CUSTOM']['TEXT']['PassingStopsY']))
+            pos5 = (int(config['CUSTOM']['TEXT']['DestinationEndX']), int(config['CUSTOM']['TEXT']['DestinationEndY']))
     page+=1
     #Start last Page
-    for x in range(len(Departures[i])%10):
+    for x in range(len(Departures[i])%int(config['CUSTOM']['TEXT']['EntriesPerPage'])):
         iter += 1
         # Print Departure Time and Train Details
         draw.text(pos1, str(OdjSort[iter - 1]['departure_time'])[:5], font=Bols, fill="black")
@@ -299,11 +302,11 @@ for i in Departures:
 
 
         # iter positions
-        pos1 = (int(config['TEXT']['DepartureTimeX']),pos1[1]+int(config['TEXT']['IncrementY']))
-        pos2 = (int(config['TEXT']['TrainNameX']),pos2[1]+int(config['TEXT']['IncrementY']))
-        pos3 = (int(config['TEXT']['TrainNumberX']),pos3[1]+int(config['TEXT']['IncrementY']))
-        pos4 = (int(config['TEXT']['PassingStopsX']),pos4[1]+int(config['TEXT']['IncrementY']))
-        pos5 = (int(config['TEXT']['DestinationEndX']),pos5[1]+int(config['TEXT']['IncrementY']))
+        pos1 = (int(config['CUSTOM']['TEXT']['DepartureTimeX']),pos1[1]+int(config['CUSTOM']['TEXT']['IncrementY']))
+        pos2 = (int(config['CUSTOM']['TEXT']['TrainNameX']),pos2[1]+int(config['CUSTOM']['TEXT']['IncrementY']))
+        pos3 = (int(config['CUSTOM']['TEXT']['TrainNumberX']),pos3[1]+int(config['CUSTOM']['TEXT']['IncrementY']))
+        pos4 = (int(config['CUSTOM']['TEXT']['PassingStopsX']),pos4[1]+int(config['CUSTOM']['TEXT']['IncrementY']))
+        pos5 = (int(config['CUSTOM']['TEXT']['DestinationEndX']),pos5[1]+int(config['CUSTOM']['TEXT']['IncrementY']))
     #Save Final Image
     image.save(f"{config['CONFIG']['OutputDirectory']}/{i}{page}.png")
 
