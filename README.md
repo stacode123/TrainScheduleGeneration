@@ -1,6 +1,11 @@
 # Train Schedule Poster Generator
 This script processes train schedules from an Excel file and generates posters with departure times, train details, and routes.
 
+
+This branch creates fixes and reduces the size of the posters allowing for implementation drop replacing into Minecraft using Immersive paintings
+
+
+
 ## Dependencies
 - Python 3.6+
 - [Pillow](https://pillow.readthedocs.io/en/stable/)
