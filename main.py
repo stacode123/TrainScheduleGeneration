@@ -35,7 +35,6 @@ def ReadExcel(sheet):
     index = df[(df.iloc[:, 0] == "Koniec") | (df.iloc[:, 0] == "End")].index[0]
     df = df.iloc[:index].reset_index(drop=True)
     df.fillna(method='ffill', inplace=True)
-    print(df)
     return df
 
 
