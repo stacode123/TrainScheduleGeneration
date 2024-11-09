@@ -239,7 +239,7 @@ print(trainslss)
 direct(config['CONFIG']['OutputDirectory'], exist_ok=True)
 #Create Posters
 print("Creating Posters")
-per = len(Departures)
+per = len(Departures) + len(Main_stations)
 it = 0
 for i in Departures:
     it += 1
@@ -348,6 +348,8 @@ print(trains2)
 
 if config['CONFIG']['GenerateRelationPoster'] == "True":
     for DrawnStation in Main_stations:
+        it += 1
+        print(f"{(it / per) * 100:.2f}%")
         CurrentY = 104
         found_stations = {}
         image = Image.open("RelationBase.png")
@@ -378,8 +380,6 @@ if config['CONFIG']['GenerateRelationPoster'] == "True":
                             if trains2[tuple(Train['train_details'])].index(y) > loc:
                                 found_stations[y[0]].append((Train['train_details'], trains2[tuple(Train['train_details'])][loc][1]))
 
-        print(DrawnStation)
-        print(found_stations)
         #sort the dictionary
         for key in found_stations:
             found_stations[key] = sorted(found_stations[key], key=sort_key5)
@@ -445,5 +445,10 @@ if config['CONFIG']['GenerateRelationPoster'] == "True":
                 itrr += 1
             if len(x) != 9:
                 CurrentY += 35
-
-        image.save(f"RelationsPosters/{DrawnStation}.png")
+        original_width, original_height = image.size
+        res = image.resize((359, 507))
+        new_image = Image.new("RGBA", (original_width, original_height), (255, 255, 255, 0))
+        paste_x = 0
+        paste_y = (original_height - 507) // 2
+        new_image.paste(res, (paste_x, paste_y))
+        new_image.save(f"RelationsPosters/relation{remove_non_english_and_spaces(DrawnStation)}.png")
