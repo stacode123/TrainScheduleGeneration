@@ -14,6 +14,7 @@ config = configparser.ConfigParser()
 config.read('config.ini')
 # Delete Existing Posters
 shutil.rmtree(config['CONFIG']['OutputDirectory'], ignore_errors=True)
+shutil.rmtree("RelationsPosters", ignore_errors=True)
 
 
 # Suppress all future warnings
@@ -21,8 +22,13 @@ warnings.simplefilter(action='ignore', category=FutureWarning)
 #Define Fonts
 Nor= ImageFont.truetype(config['CONFIG']['FontPath'] , int(config['FONT_SIZES']['Normal']))
 Norplus = ImageFont.truetype(config['CONFIG']['FontPath'] , int(config['FONT_SIZES']['NormalPlus']))
+NorMax = ImageFont.truetype(config['CONFIG']['FontPath'] , int(config['FONT_SIZES']['NormalPlus'])+2)
 Bol= ImageFont.truetype(config['CONFIG']['BoldFontPath'] , int(config['FONT_SIZES']['Bold']))
 Bols= ImageFont.truetype(config['CONFIG']['BoldFontPath'] , int(config['FONT_SIZES']['BoldSmall']))
+Bolm= ImageFont.truetype(config['CONFIG']['BoldFontPath'] , int(config['FONT_SIZES']['BoldMedium']))
+
+
+
 
 def ReadExcel(sheet):
     df = pd.read_excel(config['CONFIG']['ExcelFilePath'], sheet_name=sheet)
@@ -63,7 +69,8 @@ def sort_key4(item):
         else:
             return a
     return 0
-
+def sort_key5(item):
+    return item[1]
 
 
 
@@ -111,10 +118,12 @@ stations = list(set(stations) - {" nan"})
 stations = list(set(stations) - {"nan"})
 stations = list(set(stations) - {"Informacja o pociągu"})
 stations = list(set(stations) - {"Train Info"})
-stations = list(set(stations) - {"Warszawa\xa0Zachodnia"})
+#stations = list(set(stations) - {"Warszawa\xa0ZachodniaZac"})
 # Populate Departure and Arrival Dictionaries
 Departures =  {i: [] for i in stations}
 Arrivals =  {i: [] for i in stations}
+Main_stations = []
+
 
 print("Parsing Data")
 per = 2*len(sheets)
@@ -149,7 +158,9 @@ for i in sheets:
         for x in range(2,df.shape[1]):
             for index, row in df.iloc[2:].iterrows():
                 station = row['Unnamed: 0']
-                if station in Arrivals and row['Unnamed: 1'] == "przyj." or row['Unnamed: 1'] == "przj." and station != "Warszawa\xa0Zachodnia":
+                if station in Arrivals and row['Unnamed: 1'] == "przyj." or row['Unnamed: 1'] == "przj." and station != "123":
+                    if station not in Main_stations:
+                        Main_stations.append(station)
                     departure_time = row['Unnamed: {}'.format(x)]
                     if {'departure_time': departure_time,'train_details': [train_details[0]["Unnamed: {}".format(x)],train_details[1]["Unnamed: {}".format(x)]]} not in Arrivals[station]:
                         if departure_time != '<' and departure_time != '|' and departure_time == departure_time:
@@ -307,4 +318,112 @@ for i in Departures:
     image.save(f"{config['CONFIG']['OutputDirectory']}/{i}{page}.png")
 
 
+direct("RelationsPosters", exist_ok=True)
+RelationStart = Image.open("RelationStart.png")
+RelationBlock = Image.open("RelationBlock.png")
+trains2 = trainssort.copy()
+for key,value in trainslss.items():
+    trains2[key].append(value[::-1])
+print(trains2)
 
+if config['CONFIG']['GenerateRelationPoster'] == "True":
+    for DrawnStation in Main_stations:
+        CurrentY = 104
+        found_stations = {}
+        image = Image.open("RelationBase.png")
+        draw = ImageDraw.Draw(image)
+        draw.text((55, 28), DrawnStation, font=Bol, fill="black")
+
+        for Station in Main_stations:
+            for Train in Departures[Station]:
+                Located = False
+                loc = 0
+                for l in trains2[tuple(Train['train_details'])]:
+                    if l[0] == DrawnStation:
+                        Located = True
+
+                        loc = trains2[tuple(Train['train_details'])].index(l)
+                        loc2 = loc * 2
+                for index, y in enumerate(trains2[tuple(Train['train_details'])], 0):
+                    p = True
+                    if y[0] not in found_stations and Located and isinstance(y[0], str) and y[0] != DrawnStation and y[0] in Main_stations:
+                        if trains2[tuple(Train['train_details'])].index(y) > loc:
+                            found_stations[y[0]] = []
+                            found_stations[y[0]].append((Train['train_details'], trains2[tuple(Train['train_details'])][loc][1]))
+                            p = False
+
+                    bm = False
+                    if y[0] in found_stations and Located and isinstance(y[0], str) and p and y[0] in Main_stations:
+                        if (Train['train_details'], trains2[tuple(Train['train_details'])][loc][1]) not in found_stations[y[0]]:
+                            if trains2[tuple(Train['train_details'])].index(y) > loc:
+                                found_stations[y[0]].append((Train['train_details'], trains2[tuple(Train['train_details'])][loc][1]))
+
+        print(DrawnStation)
+        print(found_stations)
+        #sort the dictionary
+        for key in found_stations:
+            found_stations[key] = sorted(found_stations[key], key=sort_key5)
+
+
+
+        for y,x in found_stations.items():
+            image.paste(RelationStart, (19, CurrentY))
+            if len(y) <= 12:
+                draw.text((53, CurrentY + 5), y, font=Bols, fill="black")
+            else:
+                text = wrap_text(y, Bols, 86)
+                t = CurrentY + 3
+                for line in text:
+                    draw.text((53, t), line, font=Bols, fill="black")
+                    t += 12
+            intx = 162
+            itrr = 0
+            morethan9 = False
+            for m in range(9*math.floor(len(x)/9)):
+                info = ""
+                tekst = x[itrr][0][0][:2]
+                if tekst == "IC" or tekst == "TL" or tekst == "EI":
+                    info = info + "IC"
+                    info = info + "-" + x[itrr][0][0][:3]
+                    color = "red"
+                elif tekst == "KM":
+                    info = "KM-" + x[itrr][0][0][3:]
+                    color = "black"
+                elif tekst == "RE":
+                    info = "PR-R"
+                    color = "black"
+                draw.text((intx, CurrentY + 5), info, font=Norplus, fill=color)
+                draw.text((intx, CurrentY + 16), x[itrr][1].strftime("%H:%M"), font=NorMax, fill=color)
+                intx+=46
+                itrr += 1
+                if itrr%9==0:
+                    CurrentY += 35
+                    intx = 162
+                    if len(x)>9:
+                        CurrentY -= 5
+                        image.paste(RelationBlock, (19, CurrentY))
+            intx = 162
+            for m in range(len(x) % 9):
+                info = ""
+                tekst = x[itrr][0][0][:2]
+                if tekst == "IC" or tekst == "TL" or tekst == "EI":
+                    info = info + "IC"
+                    info = info + "-" + x[itrr][0][0][:3]
+                    color = "red"
+                elif tekst == "KM":
+                    info = "KM-" + x[itrr][0][0][3:]
+                    color = "black"
+                elif tekst == "RE":
+                    info = "PR-R"
+                    color = "black"
+                else:
+                    info = "Train"
+                    color = "black"
+                draw.text((intx, CurrentY + 5), info, font=Norplus, fill=color)
+                draw.text((intx, CurrentY + 16), x[itrr][1].strftime("%H:%M"), font=NorMax, fill=color)
+                intx+=46
+                itrr += 1
+            if len(x) != 9:
+                CurrentY += 35
+
+        image.save(f"RelationsPosters/{DrawnStation}.png")
