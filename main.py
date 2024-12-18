@@ -227,8 +227,6 @@ for i in trainslss:
         trainslss[i] = sort
 
 
-print(trainslss)
-
 #Make Sure The Directory Exists
 direct(config['CONFIG']['OutputDirectory'], exist_ok=True)
 #Create Posters
@@ -324,10 +322,13 @@ RelationBlock = Image.open("RelationBlock.png")
 trains2 = trainssort.copy()
 for key,value in trainslss.items():
     trains2[key].append(value[::-1])
-print(trains2)
+per = len(Main_stations)
+it = 0
+print("GeneratingRelationPosters")
 
 if config['CONFIG']['GenerateRelationPoster'] == "True":
     for DrawnStation in Main_stations:
+        print(f"{(it / per) * 100:.2f}%")
         CurrentY = 104
         found_stations = {}
         image = Image.open("RelationBase.png")
@@ -358,8 +359,6 @@ if config['CONFIG']['GenerateRelationPoster'] == "True":
                             if trains2[tuple(Train['train_details'])].index(y) > loc:
                                 found_stations[y[0]].append((Train['train_details'], trains2[tuple(Train['train_details'])][loc][1]))
 
-        print(DrawnStation)
-        print(found_stations)
         #sort the dictionary
         for key in found_stations:
             found_stations[key] = sorted(found_stations[key], key=sort_key5)
